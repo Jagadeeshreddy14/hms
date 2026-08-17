@@ -43,14 +43,38 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const rateLimit = require('express-rate-limit');
+
+const otpSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: 'Too many OTP requests from this IP. Please wait 15 minutes before requesting again.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  message: {
+    success: false,
+    message: 'Too many verification attempts from this IP. Please wait 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter,
 });
 
-router.post('/send-otp', sendOtp);
-router.post('/verify-otp', verifyOtp);
+router.post('/send-otp', otpSendLimiter, sendOtp);
+router.post('/verify-otp', otpVerifyLimiter, verifyOtp);
 router.post('/register', register);
 router.post('/register-student', 
   (req, res, next) => {

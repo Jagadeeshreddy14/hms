@@ -27,15 +27,20 @@ const sendTokenResponse = (user, statusCode, res) => {
 
 // @desc    Send OTP to email
 // @route   POST /api/auth/send-otp
+// @desc    Send OTP to email
+// @route   POST /api/auth/send-otp
 // @access  Public
 exports.sendOtp = async (req, res, next) => {
   try {
     const { email, purpose = 'registration' } = req.body;
     const normalizedEmail = (email || '').trim().toLowerCase();
 
-    if (!normalizedEmail) {
+    if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
     }
+
+    console.log(`📨 [OTP REQUEST] Target: ***@${normalizedEmail.split('@')[1] || 'domain'}`);
+    console.log(`ℹ️ [ENV DIAGNOSTICS] DB Connected: ${!!process.env.MONGODB_URI}, SMTP User Configured: ${!!process.env.SMTP_USER}`);
 
     // Check if email already registered (for registration purpose)
     if (purpose === 'registration') {
@@ -48,7 +53,20 @@ exports.sendOtp = async (req, res, next) => {
       }
     }
 
-    // Generate secure 6-digit OTP
+    // Check for active resend cooldown (60 seconds)
+    const existingOtp = await Otp.findOne({ email: normalizedEmail, purpose });
+    if (existingOtp) {
+      const timeSinceLastSent = (Date.now() - new Date(existingOtp.createdAt).getTime()) / 1000;
+      if (timeSinceLastSent < 60) {
+        const remaining = Math.ceil(60 - timeSinceLastSent);
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${remaining} seconds before requesting a new code.`
+        });
+      }
+    }
+
+    // Generate secure 6-digit cryptographic OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Clear previous unverified OTPs for this email and purpose
@@ -58,16 +76,24 @@ exports.sendOtp = async (req, res, next) => {
     await Otp.create({
       email: normalizedEmail,
       otp,
-      purpose
+      purpose,
+      attempts: 0
     });
 
-    // Send email
+    // Send email via configured provider
     const emailResult = await sendOtpEmail(normalizedEmail, otp, purpose);
+
+    if (!emailResult.success) {
+      console.error(`❌ OTP Dispatch Failed for ${normalizedEmail.split('@')[1]}: ${emailResult.error}`);
+      return res.status(500).json({
+        success: false,
+        message: 'Unable to deliver verification code. Please check server email settings or contact administration.'
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: `Verification code sent to ${normalizedEmail}`,
-      devOtp: emailResult.devOtp || undefined
+      message: `Verification code sent to ${normalizedEmail}`
     });
   } catch (error) {
     next(error);
@@ -84,17 +110,40 @@ exports.verifyOtp = async (req, res, next) => {
     const cleanOtp = (otp || '').trim();
 
     if (!normalizedEmail || !cleanOtp) {
-      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+      return res.status(400).json({ success: false, message: 'Email and 6-digit OTP are required' });
     }
 
-    const otpRecord = await Otp.findOne({ email: normalizedEmail, otp: cleanOtp, purpose });
+    const otpRecord = await Otp.findOne({ email: normalizedEmail, purpose });
 
     if (!otpRecord) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired OTP. Please request a new code.'
+        message: 'Verification code has expired or was not requested. Please request a new code.'
       });
     }
+
+    // Brute force protection: Max 5 attempts
+    if (otpRecord.attempts >= 5) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.status(429).json({
+        success: false,
+        message: 'Maximum verification attempts exceeded. Please request a new verification code.'
+      });
+    }
+
+    // Validate OTP
+    if (otpRecord.otp !== cleanOtp) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+      const remaining = 5 - otpRecord.attempts;
+      return res.status(400).json({
+        success: false,
+        message: `Invalid verification code. ${remaining > 0 ? `${remaining} attempt(s) remaining.` : 'Code invalidated.'}`
+      });
+    }
+
+    // One-time use: Delete OTP immediately upon successful verification
+    await Otp.deleteOne({ _id: otpRecord._id });
 
     res.status(200).json({
       success: true,

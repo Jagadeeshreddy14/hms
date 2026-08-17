@@ -59,23 +59,26 @@ exports.sendOtpEmail = async (to, otp, purpose = 'registration') => {
 
   if (transporter) {
     try {
+      console.log(`📧 Dispatching OTP email to recipient domain: ${to.split('@')[1] || 'unknown'}`);
+      console.log(`ℹ️ SMTP Provider Configured: Yes (Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}, Port: 465, User: ${process.env.SMTP_USER ? 'Set' : 'Missing'})`);
+
+      const fromName = process.env.SMTP_FROM_NAME || 'Smart Hostel';
       const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
       const info = await transporter.sendMail({
-        from: `"Smart Hostel" <${fromEmail}>`,
+        from: `"${fromName}" <${fromEmail}>`,
         to,
-        subject: `Your Verification Code: ${otp} - Smart Hostel`,
-        text: `Your Smart Hostel verification code is ${otp}. It expires in 10 minutes.`,
+        subject: `Your Verification Code: ${otp} - ${fromName}`,
+        text: `Your ${fromName} verification code is ${otp}. It expires in 10 minutes.`,
         html: htmlContent,
       });
-      console.log(`📧 OTP email sent to ${to}: MessageID ${info.messageId}`);
+      console.log(`✓ OTP email accepted by SMTP server. MessageID: ${info.messageId}`);
       return { success: true, messageId: info.messageId };
     } catch (err) {
-      console.error(`❌ SMTP Email Error:`, err.message);
-      console.log(`ℹ️ [DEV/FALLBACK OTP for ${to}]: ${otp}`);
-      return { success: false, error: err.message, devOtp: otp };
+      console.error(`❌ SMTP Provider Error:`, err.message);
+      return { success: false, error: err.message };
     }
   } else {
-    console.log(`ℹ️ [SMTP NOT CONFIGURED] Generated OTP for ${to}: ${otp}`);
-    return { success: true, isDev: true, devOtp: otp };
+    console.warn(`⚠️ [SMTP NOT CONFIGURED] process.env.SMTP_USER or process.env.SMTP_PASS is not set in environment variables.`);
+    return { success: false, error: 'Email service is not configured on the server' };
   }
 };
