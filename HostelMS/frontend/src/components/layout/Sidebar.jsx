@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
   Building2, LayoutDashboard, DoorOpen, Users, CreditCard,
   AlertCircle, UserCheck, Bell, LogOut, Menu, X, ChevronRight,
-  Home, BarChart3, ClipboardList
+  Home, BarChart3, ClipboardList, ShieldCheck
 } from 'lucide-react';
 
 const NAV_ITEMS = {
@@ -15,6 +15,7 @@ const NAV_ITEMS = {
     { to: '/admin/rooms', icon: DoorOpen, label: 'Rooms' },
     { to: '/admin/students', icon: Users, label: 'Students' },
     { to: '/admin/student-approvals', icon: ClipboardList, label: 'Student Approvals' },
+    { to: '/admin/kyc-verifications', icon: ShieldCheck, label: 'Aadhaar KYC' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { to: '/admin/complaints', icon: AlertCircle, label: 'Complaints' },
     { to: '/admin/visitors', icon: UserCheck, label: 'Visitors' },
@@ -24,12 +25,14 @@ const NAV_ITEMS = {
     { to: '/warden', icon: LayoutDashboard, label: 'Dashboard', end: true },
     { to: '/warden/rooms', icon: DoorOpen, label: 'Rooms' },
     { to: '/warden/student-approvals', icon: ClipboardList, label: 'Student Approvals' },
+    { to: '/warden/kyc-verifications', icon: ShieldCheck, label: 'Aadhaar KYC' },
     { to: '/warden/complaints', icon: AlertCircle, label: 'Complaints' },
     { to: '/warden/visitors', icon: UserCheck, label: 'Visitors' },
     { to: '/warden/payments', icon: CreditCard, label: 'Payments' },
   ],
   student: [
     { to: '/student', icon: Home, label: 'Dashboard', end: true },
+    { to: '/student/identity-verification', icon: ShieldCheck, label: 'Identity Verification' },
     { to: '/student/browse-rooms', icon: DoorOpen, label: 'Browse Rooms' },
     { to: '/student/room', icon: DoorOpen, label: 'My Room' },
     { to: '/student/payments', icon: CreditCard, label: 'Payments' },

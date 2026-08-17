@@ -83,6 +83,44 @@ const studentSchema = new mongoose.Schema(
     photoUrl: String,
     bloodGroup: String,
     emergencyContact: String,
+    // Aadhaar Offline e-KYC Verification
+    aadhaarVerification: {
+      status: {
+        type: String,
+        enum: [
+          'NOT_VERIFIED',
+          'PENDING',
+          'VERIFIED',
+          'FAILED',
+          'MANUAL_REVIEW'
+        ],
+        default: 'NOT_VERIFIED',
+      },
+      verificationMethod: {
+        type: String,
+        default: 'AADHAAR_OFFLINE_EKYC',
+      },
+      verifiedName: String,
+      verifiedDob: String,
+      verifiedGender: String,
+      verificationReference: String,
+      verifiedAt: Date,
+      failureReason: String,
+      photoBase64: String, // Extracted resident photo for verification comparison
+      maskedAadhaar: String, // e.g. "XXXX-XXXX-1234"
+      address: {
+        careOf: String,
+        street: String,
+        city: String,
+        state: String,
+        pincode: String,
+      },
+      reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      reviewNotes: String,
+    },
   },
   { timestamps: true }
 );

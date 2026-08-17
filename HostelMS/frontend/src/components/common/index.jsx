@@ -59,6 +59,11 @@ export function Badge({ status }) {
     pending_verification: 'bg-blue-100 text-blue-700',
     vacated: 'bg-slate-100 text-slate-600',
     suspended: 'bg-red-100 text-red-700',
+    VERIFIED: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    PENDING: 'bg-amber-100 text-amber-800 border border-amber-200',
+    FAILED: 'bg-red-100 text-red-800 border border-red-200',
+    MANUAL_REVIEW: 'bg-orange-100 text-orange-800 border border-orange-200',
+    NOT_VERIFIED: 'bg-slate-100 text-slate-700 border border-slate-200',
   };
   const cls = configs[status] || 'bg-slate-100 text-slate-600';
   return (

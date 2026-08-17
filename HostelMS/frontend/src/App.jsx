@@ -16,12 +16,14 @@ import ComplaintsPage from './pages/admin/Complaints';
 import VisitorsPage from './pages/admin/Visitors';
 import AnalyticsPage from './pages/admin/Analytics';
 import StudentApprovals from './pages/admin/StudentApprovals';
+import KycVerifications from './pages/admin/KycVerifications';
 
 import WardenDashboard from './pages/warden/Dashboard';
 
 import StudentDashboard from './pages/student/Dashboard';
 import MyRoom from './pages/student/MyRoom';
 import BrowseRooms from './pages/student/BrowseRooms';
+import IdentityVerification from './pages/student/IdentityVerification';
 
 import NotificationsPage from './pages/Notifications';
 
@@ -54,11 +56,12 @@ function AppRoutes() {
         <Route path="hostels" element={<HostelsPage />} />
         <Route path="rooms" element={<RoomsPage />} />
         <Route path="students" element={<StudentsPage />} />
+        <Route path="student-approvals" element={<StudentApprovals />} />
+        <Route path="kyc-verifications" element={<KycVerifications />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="complaints" element={<ComplaintsPage />} />
         <Route path="visitors" element={<VisitorsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
-        <Route path="student-approvals" element={<StudentApprovals />} />
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
@@ -70,12 +73,14 @@ function AppRoutes() {
         <Route path="visitors" element={<VisitorsPage />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="student-approvals" element={<StudentApprovals />} />
+        <Route path="kyc-verifications" element={<KycVerifications />} />
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 
       {/* Student routes */}
       <Route path="/student" element={<RequireAuth roles={['student']}><DashboardLayout /></RequireAuth>}>
         <Route index element={<StudentDashboard />} />
+        <Route path="identity-verification" element={<IdentityVerification />} />
         <Route path="room" element={<MyRoom />} />
         <Route path="browse-rooms" element={<BrowseRooms />} />
         <Route path="payments" element={<PaymentsPage />} />

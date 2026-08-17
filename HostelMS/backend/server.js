@@ -87,6 +87,7 @@ app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/visitors', require('./routes/visitors'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/kyc', require('./routes/kyc'));
 
 // 404 handler
 app.use('*', (req, res) => {

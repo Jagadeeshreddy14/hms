@@ -150,3 +150,14 @@ export const notificationAPI = {
   markAllRead: () => api.put('/notifications/read-all'),
   markRead: (id) => api.put(`/notifications/${id}/read`),
 };
+
+// KYC & Aadhaar e-KYC
+export const kycAPI = {
+  getAadhaarStatus: () => api.get('/kyc/aadhaar/status'),
+  verifyAadhaar: (formData) => api.post('/kyc/aadhaar/verify', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteAadhaarData: () => api.delete('/kyc/aadhaar/data'),
+  getAdminVerifications: (params) => api.get('/kyc/admin/verifications', { params }),
+  adminReviewKyc: (studentId, data) => api.put(`/kyc/admin/review/${studentId}`, data),
+};
