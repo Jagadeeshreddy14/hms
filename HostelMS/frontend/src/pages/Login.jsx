@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -13,7 +13,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { login, loginWithGoogle } = useAuth();
-  const navigate = useNavigate();
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -30,7 +29,8 @@ export default function Login() {
         googleId: res.user.uid,
       });
       toast.success(`Welcome, ${user.name}!`);
-      navigate(`/${user.role}`);
+      // Full automatic reload into role dashboard
+      window.location.href = `/${user.role}`;
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || 'Google authentication failed');
@@ -45,7 +45,8 @@ export default function Login() {
     try {
       const user = await login(form.email, form.password);
       toast.success(`Welcome back, ${user.name}!`);
-      navigate(`/${user.role}`);
+      // Full automatic reload into role dashboard
+      window.location.href = `/${user.role}`;
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
     } finally {
@@ -71,7 +72,7 @@ export default function Login() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       toast.success('Account created successfully!');
-      navigate(`/${data.user.role}`);
+      window.location.href = `/${data.user.role}`;
     } catch (err) {
       toast.error(err.response?.data?.message || 'Signup failed');
     } finally {
