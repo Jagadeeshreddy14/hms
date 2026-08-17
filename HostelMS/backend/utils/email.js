@@ -3,14 +3,15 @@ const { Resend } = require('resend');
 
 const createTransporter = () => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT) || (host.includes('gmail') ? 465 : 587);
   const user = process.env.SMTP_USER;
   const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, ''); // strip any spaces
 
   if (user && pass) {
     return nodemailer.createTransport({
-      host: host || 'smtp.gmail.com',
-      port: 465,
-      secure: true, // SSL on port 465 is most reliable on Render/Cloud hosts
+      host,
+      port,
+      secure: port === 465, // SSL on 465, STARTTLS on 587
       auth: { user, pass },
       tls: {
         rejectUnauthorized: false,
