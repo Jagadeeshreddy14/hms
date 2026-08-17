@@ -34,7 +34,18 @@ if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
 // Serve uploads folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Health check
+// Root & Health check
+app.get('/', (req, res) => {
+  res.json({
+    status: 'OK',
+    message: 'Smart Hostel Management API is running',
+    version: '1.0.0',
+    endpoints: '/api',
+    health: '/api/health',
+    timestamp: new Date()
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Smart Hostel API is running', timestamp: new Date() });
 });
