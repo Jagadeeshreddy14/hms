@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build Outputs
+build/
+dist/
+**/build/
+**/dist/
+
+# Uploaded media & documents (keep directory structure)
+HostelMS/backend/uploads/documents/*
+!HostelMS/backend/uploads/documents/.gitkeep
+HostelMS/backend/uploads/slips/*
+!HostelMS/backend/uploads/slips/.gitkeep
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
