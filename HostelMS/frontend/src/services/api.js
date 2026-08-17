@@ -162,7 +162,11 @@ export const kycAPI = {
   verifyAadhaar: (formData) => api.post('/kyc/aadhaar/verify', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  uploadAadhaar: (formData) => api.post('/kyc/aadhaar/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
   deleteAadhaarData: () => api.delete('/kyc/aadhaar/data'),
+  manualReviewAadhaar: (data) => api.post('/kyc/aadhaar/manual-review', data),
   getAdminVerifications: (params) => api.get('/kyc/admin/verifications', { params }),
   adminReviewKyc: (studentId, data) => api.put(`/kyc/admin/review/${studentId}`, data),
 };

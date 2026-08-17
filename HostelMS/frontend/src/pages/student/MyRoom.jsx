@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { studentAPI } from '../../services/api';
 import { Card, Loading } from '../../components/common';
-import { DoorOpen, MapPin } from 'lucide-react';
+import { DoorOpen, MapPin, Compass } from 'lucide-react';
 
 const AMENITY_ICONS = { 'AC': '❄️', 'Wifi': '📶', 'WiFi': '📶', 'Attached Bathroom': '🚿', 'Fan': '🌀', 'Balcony': '🏠', 'Gym': '💪', 'Laundry': '👕', 'Canteen': '🍽️' };
 
@@ -15,10 +16,22 @@ export default function MyRoom() {
 
   if (loading) return <Loading />;
   if (!student?.room) return (
-    <div className="text-center py-20">
-      <DoorOpen className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-      <h3 className="font-semibold text-slate-700 text-xl">No Room Assigned</h3>
-      <p className="text-slate-400 mt-1">Contact the warden to get a room assigned.</p>
+    <div className="text-center py-20 max-w-md mx-auto space-y-4">
+      <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+        <DoorOpen className="w-8 h-8" />
+      </div>
+      <h3 className="font-bold text-slate-800 text-xl">No Room Assigned Yet</h3>
+      <p className="text-slate-500 text-sm">
+        You have not been allocated a room yet. Please browse available rooms to apply.
+      </p>
+      <div className="pt-2">
+        <Link
+          to="/student/browse-rooms"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-sm shadow-lg shadow-primary-600/20 transition"
+        >
+          <Compass className="w-4 h-4" /> Browse Available Rooms
+        </Link>
+      </div>
     </div>
   );
 

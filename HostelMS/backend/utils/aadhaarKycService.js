@@ -247,3 +247,8 @@ exports.processOfflineEkyc = async (zipBuffer, shareCode, studentName) => {
     signatureCheck,
   };
 };
+
+exports.computeNameSimilarity = computeNameSimilarity;
+exports.normalizeName = normalizeName;
+exports.verifyXmlSignature = verifyXmlSignature;
+

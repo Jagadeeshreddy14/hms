@@ -9,6 +9,7 @@ const {
   deleteAadhaarKycData,
   getAdminKycVerifications,
   adminReviewKyc,
+  manualReviewAadhaar,
 } = require('../controllers/kycController');
 
 // Rate limiting for Aadhaar verification to prevent brute forcing of share codes
@@ -27,7 +28,7 @@ const kycLimiter = rateLimit({
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB maximum file size
+    fileSize: parseInt(process.env.AADHAAR_MAX_FILE_SIZE, 10) || 5 * 1024 * 1024, // 5MB maximum file size
   },
   fileFilter: (req, file, cb) => {
     const isZip = file.mimetype === 'application/zip' ||
@@ -41,31 +42,27 @@ const upload = multer({
   },
 });
 
-// Student KYC Routes
-router.post(
-  '/aadhaar/verify',
-  protect,
-  authorize('student'),
-  kycLimiter,
-  (req, res, next) => {
-    upload.single('zipFile')(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message || 'File upload error',
-        });
-      }
-      next();
-    });
-  },
-  uploadAndVerifyAadhaar
-);
+const handleMulterUpload = (req, res, next) => {
+  upload.single('zipFile')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'File upload error',
+      });
+    }
+    next();
+  });
+};
 
+// Student KYC Routes
+router.post('/aadhaar/verify', protect, authorize('student'), kycLimiter, handleMulterUpload, uploadAndVerifyAadhaar);
+router.post('/aadhaar/upload', protect, authorize('student'), kycLimiter, handleMulterUpload, uploadAndVerifyAadhaar);
 router.get('/aadhaar/status', protect, authorize('student'), getAadhaarKycStatus);
 router.delete('/aadhaar/data', protect, authorize('student'), deleteAadhaarKycData);
 
 // Admin & Warden Routes
 router.get('/admin/verifications', protect, authorize('admin', 'warden'), getAdminKycVerifications);
+router.post('/aadhaar/manual-review', protect, authorize('admin'), manualReviewAadhaar);
 router.put('/admin/review/:studentId', protect, authorize('admin'), adminReviewKyc);
 
 module.exports = router;

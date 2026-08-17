@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
   Building2, LayoutDashboard, DoorOpen, Users, CreditCard,
   AlertCircle, UserCheck, Bell, LogOut, Menu, X, ChevronRight,
-  Home, BarChart3, ClipboardList, ShieldCheck
+  Home, BarChart3, ClipboardList
 } from 'lucide-react';
+
+import { studentAPI } from '../../services/api';
 
 const NAV_ITEMS = {
   admin: [
@@ -15,7 +17,6 @@ const NAV_ITEMS = {
     { to: '/admin/rooms', icon: DoorOpen, label: 'Rooms' },
     { to: '/admin/students', icon: Users, label: 'Students' },
     { to: '/admin/student-approvals', icon: ClipboardList, label: 'Student Approvals' },
-    { to: '/admin/kyc-verifications', icon: ShieldCheck, label: 'Aadhaar KYC' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { to: '/admin/complaints', icon: AlertCircle, label: 'Complaints' },
     { to: '/admin/visitors', icon: UserCheck, label: 'Visitors' },
@@ -25,14 +26,12 @@ const NAV_ITEMS = {
     { to: '/warden', icon: LayoutDashboard, label: 'Dashboard', end: true },
     { to: '/warden/rooms', icon: DoorOpen, label: 'Rooms' },
     { to: '/warden/student-approvals', icon: ClipboardList, label: 'Student Approvals' },
-    { to: '/warden/kyc-verifications', icon: ShieldCheck, label: 'Aadhaar KYC' },
     { to: '/warden/complaints', icon: AlertCircle, label: 'Complaints' },
     { to: '/warden/visitors', icon: UserCheck, label: 'Visitors' },
     { to: '/warden/payments', icon: CreditCard, label: 'Payments' },
   ],
   student: [
     { to: '/student', icon: Home, label: 'Dashboard', end: true },
-    { to: '/student/identity-verification', icon: ShieldCheck, label: 'Identity Verification' },
     { to: '/student/browse-rooms', icon: DoorOpen, label: 'Browse Rooms' },
     { to: '/student/room', icon: DoorOpen, label: 'My Room' },
     { to: '/student/payments', icon: CreditCard, label: 'Payments' },
@@ -57,8 +56,34 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [hasRoomAssigned, setHasRoomAssigned] = useState(false);
 
-  const navItems = NAV_ITEMS[user?.role] || [];
+  useEffect(() => {
+    if (user?.role === 'student') {
+      studentAPI.getMe()
+        .then(({ data }) => {
+          setHasRoomAssigned(Boolean(data?.data?.room));
+        })
+        .catch(() => {
+          setHasRoomAssigned(Boolean(user?.studentId?.room));
+        });
+    }
+  }, [user]);
+
+  const navItems = (NAV_ITEMS[user?.role] || []).filter((item) => {
+    if (user?.role === 'student') {
+      if (item.to === '/student/browse-rooms') {
+        // ONLY visible before room assignment
+        return !hasRoomAssigned;
+      }
+      if (item.to === '/student/room') {
+        // ONLY visible after room is assigned
+        return hasRoomAssigned;
+      }
+    }
+    return true;
+  });
+
   const gradient = ROLE_COLORS[user?.role] || 'from-gray-600 to-gray-700';
 
   const handleLogout = () => {

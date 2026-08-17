@@ -1,5 +1,7 @@
 const Student = require('../models/Student');
 const Notification = require('../models/Notification');
+const AadhaarVerification = require('../models/AadhaarVerification');
+const AadhaarAuditLog = require('../models/AadhaarAuditLog');
 const { processOfflineEkyc } = require('../utils/aadhaarKycService');
 
 // @desc    Upload and verify Aadhaar Offline e-KYC ZIP
@@ -45,6 +47,27 @@ exports.uploadAndVerifyAadhaar = async (req, res, next) => {
       student.name
     );
 
+    // Save or update dedicated AadhaarVerification collection
+    const verificationRecord = await AadhaarVerification.findOneAndUpdate(
+      { student: student._id },
+      {
+        student: student._id,
+        status: kycResult.status,
+        verificationMethod: 'AADHAAR_OFFLINE_EKYC',
+        verifiedName: kycResult.verifiedName,
+        verifiedDob: kycResult.verifiedDob,
+        verifiedGender: kycResult.verifiedGender,
+        maskedAadhaar: kycResult.maskedAadhaar,
+        nameMatch: kycResult.nameSimilarity >= 70,
+        photoBase64: kycResult.photoBase64,
+        address: kycResult.address,
+        verificationReference: kycResult.verificationReference,
+        verifiedAt: kycResult.verifiedAt,
+        failureReason: kycResult.failureReason,
+      },
+      { upsert: true, new: true }
+    );
+
     // Update student KYC status
     student.aadhaarVerification = {
       status: kycResult.status,
@@ -76,6 +99,27 @@ exports.uploadAndVerifyAadhaar = async (req, res, next) => {
 
     await student.save();
 
+    // Log in AadhaarAuditLog (Never log Aadhaar number or Share Code)
+    await AadhaarAuditLog.create({
+      actorId: req.user._id,
+      actorRole: req.user.role || 'student',
+      action: kycResult.status === 'VERIFIED'
+        ? 'AADHAAR_VERIFIED'
+        : kycResult.status === 'MANUAL_REVIEW'
+        ? 'AADHAAR_MANUAL_REVIEW_QUEUED'
+        : 'AADHAAR_VERIFICATION_FAILED',
+      studentId: student._id,
+      verificationId: verificationRecord._id,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+      details: {
+        method: 'AADHAAR_OFFLINE_EKYC',
+        status: kycResult.status,
+        nameMatch: kycResult.nameSimilarity >= 70,
+        nameSimilarityPercent: kycResult.nameSimilarity,
+        referenceId: kycResult.verificationReference,
+      },
+    });
+
     // Create student notification
     const notificationTitle = kycResult.status === 'VERIFIED'
       ? 'Aadhaar Identity Verified'
@@ -103,9 +147,10 @@ exports.uploadAndVerifyAadhaar = async (req, res, next) => {
       success: true,
       message: kycResult.status === 'VERIFIED'
         ? 'Aadhaar verification successful!'
-        : 'Aadhaar e-KYC submitted — undergoing review',
+        : 'Aadhaar e-KYC submitted — undergoing administrative review',
       data: {
         status: student.aadhaarVerification.status,
+        verificationMethod: 'AADHAAR_OFFLINE_EKYC',
         verifiedName: student.aadhaarVerification.verifiedName,
         verifiedDob: student.aadhaarVerification.verifiedDob,
         verifiedGender: student.aadhaarVerification.verifiedGender,
@@ -115,13 +160,14 @@ exports.uploadAndVerifyAadhaar = async (req, res, next) => {
         address: student.aadhaarVerification.address,
         photoBase64: student.aadhaarVerification.photoBase64,
         nameSimilarity: kycResult.nameSimilarity,
+        nameMatch: kycResult.nameSimilarity >= 70,
       },
     });
   } catch (error) {
     console.error('❌ Aadhaar KYC Error:', error.message);
     res.status(400).json({
       success: false,
-      message: error.message || 'The uploaded e-KYC document could not be verified. Please download a fresh Offline e-KYC file from UIDAI and try again.',
+      message: error.message || 'The uploaded e-KYC document could not be processed. Please download a fresh Offline e-KYC file from UIDAI and try again.',
     });
   }
 };
@@ -255,13 +301,16 @@ exports.getAdminKycVerifications = async (req, res, next) => {
 
 // @desc    Admin review/approve/reject manual KYC
 // @route   PUT /api/kyc/admin/review/:studentId
+// @route   POST /api/kyc/aadhaar/manual-review
 // @access  Private (Admin)
 exports.adminReviewKyc = async (req, res, next) => {
   try {
-    const { status, reviewNotes } = req.body;
-    const { studentId } = req.params;
+    const { status, reviewNotes, reviewReason } = req.body;
+    const studentId = req.params.studentId || req.body.studentId;
 
-    if (!['VERIFIED', 'FAILED', 'NOT_VERIFIED'].includes(status)) {
+    const reasonText = reviewNotes || reviewReason || '';
+
+    if (!['VERIFIED', 'FAILED', 'NOT_VERIFIED', 'MANUAL_REVIEW'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid status. Must be VERIFIED, FAILED, or NOT_VERIFIED',
@@ -276,34 +325,79 @@ exports.adminReviewKyc = async (req, res, next) => {
       });
     }
 
+    const verificationMethod = status === 'VERIFIED' ? 'MANUAL_ADMIN_REVIEW' : (student.aadhaarVerification?.verificationMethod || 'AADHAAR_OFFLINE_EKYC');
+
     student.aadhaarVerification = {
       ...(student.aadhaarVerification || {}),
       status,
+      verificationMethod,
       reviewedBy: req.user._id,
-      reviewNotes: reviewNotes || '',
+      reviewNotes: reasonText,
+      reviewedAt: new Date(),
       verifiedAt: status === 'VERIFIED' ? new Date() : student.aadhaarVerification?.verifiedAt,
-      failureReason: status === 'FAILED' ? (reviewNotes || 'Verification rejected by administrator') : undefined,
+      failureReason: status === 'FAILED' ? (reasonText || 'Verification rejected by administrator') : undefined,
     };
 
     await student.save();
+
+    // Update AadhaarVerification collection
+    const updatedRecord = await AadhaarVerification.findOneAndUpdate(
+      { student: student._id },
+      {
+        student: student._id,
+        status,
+        verificationMethod,
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+        reviewReason: reasonText,
+        verifiedAt: status === 'VERIFIED' ? new Date() : undefined,
+        failureReason: status === 'FAILED' ? reasonText : undefined,
+      },
+      { upsert: true, new: true }
+    );
+
+    // Audit Log
+    const auditAction = status === 'VERIFIED'
+      ? 'MANUAL_VERIFICATION_APPROVED'
+      : status === 'FAILED'
+      ? 'MANUAL_VERIFICATION_REJECTED'
+      : 'MANUAL_VERIFICATION_REUPLOAD_REQUESTED';
+
+    await AadhaarAuditLog.create({
+      actorId: req.user._id,
+      actorRole: req.user.role || 'admin',
+      action: auditAction,
+      studentId: student._id,
+      verificationId: updatedRecord._id,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+      details: {
+        method: 'MANUAL_ADMIN_REVIEW',
+        status,
+        reviewReason: reasonText,
+      },
+    });
 
     // Send notification
     await Notification.create({
       user: student.user,
       title: status === 'VERIFIED' ? 'Aadhaar Verification Approved' : 'Aadhaar Verification Status Updated',
       message: status === 'VERIFIED'
-        ? 'Your Aadhaar identity has been reviewed and approved by the administrator.'
-        : `Your Aadhaar verification was reviewed: ${reviewNotes || 'Please upload fresh e-KYC documents.'}`,
+        ? 'Your Aadhaar identity has been reviewed and approved by the hostel administrator.'
+        : `Your Aadhaar verification was reviewed: ${reasonText || 'Please upload fresh e-KYC documents.'}`,
       type: status === 'VERIFIED' ? 'success' : 'warning',
       link: '/student/identity-verification',
     });
 
     res.status(200).json({
       success: true,
-      message: `Student Aadhaar verification updated to ${status}`,
+      message: `Student Aadhaar verification updated to ${status} (Method: ${verificationMethod})`,
       data: student.aadhaarVerification,
     });
   } catch (error) {
     next(error);
   }
 };
+
+// Alias for POST /api/kyc/aadhaar/manual-review
+exports.manualReviewAadhaar = exports.adminReviewKyc;
+

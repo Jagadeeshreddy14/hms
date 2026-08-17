@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { roomAPI, hostelAPI, studentAPI } from '../../services/api';
 import { Card, Button, Badge, Loading, Empty } from '../../components/common';
 import { DoorOpen, Users, Building2 } from 'lucide-react';
@@ -77,6 +78,31 @@ export default function BrowseRooms() {
   };
 
   if (loading) return <Loading text="Loading available rooms..." />;
+
+  // If student already has a room assigned, show redirect banner
+  if (student?.room) {
+    return (
+      <div className="space-y-6 max-w-2xl mx-auto py-12">
+        <Card className="p-8 text-center space-y-4 border border-emerald-200 bg-emerald-50/50 rounded-3xl shadow-sm">
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold shadow-sm">
+            <DoorOpen className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900">Room Already Allocated</h3>
+          <p className="text-sm text-slate-600 max-w-md mx-auto">
+            You have already been assigned to <strong>Room {student.room.roomNumber}</strong> (Block {student.room.hostelBlock || 'A'}).
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/student/room"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-sm shadow-lg shadow-primary-600/20 transition"
+            >
+              <DoorOpen className="w-4 h-4" /> Go to My Room
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const filteredRooms = rooms.filter(room => {
     if (filters.hostel && room.hostel?._id !== filters.hostel) return false;

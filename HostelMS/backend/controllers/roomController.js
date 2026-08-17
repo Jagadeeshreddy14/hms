@@ -65,7 +65,12 @@ exports.updateRoom = async (req, res, next) => {
 // @route   POST /api/rooms/:id/allocate
 exports.allocateRoom = async (req, res, next) => {
   try {
-    const { studentId } = req.body;
+    let studentId = req.body.studentId;
+    if (!studentId && req.user.role === 'student') {
+      const studentDoc = await Student.findOne({ user: req.user._id });
+      studentId = studentDoc?._id;
+    }
+
     const room = await Room.findById(req.params.id);
 
     if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
@@ -73,10 +78,14 @@ exports.allocateRoom = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Room is full' });
     }
 
-    const student = await Student.findById(studentId);
+    let student = await Student.findById(studentId);
+    if (!student && req.user.role === 'student') {
+      student = await Student.findOne({ user: req.user._id });
+    }
+
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
     if (student.room) {
-      return res.status(400).json({ success: false, message: 'Student already has a room' });
+      return res.status(400).json({ success: false, message: 'Student already has a room assigned' });
     }
 
     // Update room
