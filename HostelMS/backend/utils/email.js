@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const createTransporter = () => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -20,7 +21,7 @@ const createTransporter = () => {
 };
 
 exports.sendOtpEmail = async (to, otp, purpose = 'registration') => {
-  const transporter = createTransporter();
+  const fromName = process.env.SMTP_FROM_NAME || 'Sri Srinivasa Boys Hostel';
   const title = purpose === 'password_reset' ? 'Password Reset Code' : 'Email Verification Code';
   const htmlContent = `
     <!DOCTYPE html>
@@ -41,7 +42,7 @@ exports.sendOtpEmail = async (to, otp, purpose = 'registration') => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Smart Hostel Management</h1>
+            <h1>${fromName}</h1>
           </div>
           <div class="content">
             <h2 style="font-size: 18px; margin-top: 0; color: #0f172a;">${title}</h2>
@@ -50,19 +51,44 @@ exports.sendOtpEmail = async (to, otp, purpose = 'registration') => {
             <p class="note">This OTP is valid for <strong>10 minutes</strong>. If you did not request this verification, please ignore this email.</p>
           </div>
           <div class="footer">
-            © ${new Date().getFullYear()} Smart Hostel Management System. All rights reserved.
+            © ${new Date().getFullYear()} ${fromName}. All rights reserved.
           </div>
         </div>
       </body>
     </html>
   `;
 
+  // 1. Prioritize Resend API (HTTP REST - 100% reliable on Cloud/Render, zero port/firewall issues)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      console.log(`🚀 [RESEND API] Sending OTP email to recipient domain: ${to.split('@')[1] || 'domain'}`);
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const resendFrom = process.env.RESEND_FROM || `${fromName} <onboarding@resend.dev>`;
+
+      const response = await resend.emails.send({
+        from: resendFrom,
+        to: [to],
+        subject: `Your Verification Code: ${otp} - ${fromName}`,
+        html: htmlContent,
+      });
+
+      if (response.error) {
+        console.error(`❌ Resend API Error:`, response.error.message);
+        throw new Error(response.error.message);
+      }
+
+      console.log(`✓ [RESEND API] OTP email successfully sent via HTTPS. ID: ${response.data?.id}`);
+      return { success: true, messageId: response.data?.id };
+    } catch (resendErr) {
+      console.warn(`⚠️ Resend API failed (${resendErr.message}), falling back to SMTP...`);
+    }
+  }
+
+  // 2. Fallback to Nodemailer SMTP (Gmail / Custom SMTP)
+  const transporter = createTransporter();
   if (transporter) {
     try {
-      console.log(`📧 Dispatching OTP email to recipient domain: ${to.split('@')[1] || 'unknown'}`);
-      console.log(`ℹ️ SMTP Provider Configured: Yes (Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}, Port: 465, User: ${process.env.SMTP_USER ? 'Set' : 'Missing'})`);
-
-      const fromName = process.env.SMTP_FROM_NAME || 'Smart Hostel';
+      console.log(`📧 [SMTP] Dispatching OTP email to recipient domain: ${to.split('@')[1] || 'domain'}`);
       const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
       const info = await transporter.sendMail({
         from: `"${fromName}" <${fromEmail}>`,
@@ -71,14 +97,14 @@ exports.sendOtpEmail = async (to, otp, purpose = 'registration') => {
         text: `Your ${fromName} verification code is ${otp}. It expires in 10 minutes.`,
         html: htmlContent,
       });
-      console.log(`✓ OTP email accepted by SMTP server. MessageID: ${info.messageId}`);
+      console.log(`✓ [SMTP] OTP email accepted by server. MessageID: ${info.messageId}`);
       return { success: true, messageId: info.messageId };
     } catch (err) {
       console.error(`❌ SMTP Provider Error:`, err.message);
       return { success: false, error: err.message };
     }
-  } else {
-    console.warn(`⚠️ [SMTP NOT CONFIGURED] process.env.SMTP_USER or process.env.SMTP_PASS is not set in environment variables.`);
-    return { success: false, error: 'Email service is not configured on the server' };
   }
+
+  console.warn(`⚠️ [EMAIL NOT CONFIGURED] Neither RESEND_API_KEY nor SMTP credentials found.`);
+  return { success: false, error: 'Email service is not configured on the server' };
 };
