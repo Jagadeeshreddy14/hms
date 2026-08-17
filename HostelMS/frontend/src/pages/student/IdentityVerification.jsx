@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { kycAPI } from '../../services/api';
-import { PageHeader, Card, Button, Badge, Loading } from '../../components/common';
+import { PageHeader, Card, Button, Loading } from '../../components/common';
 import toast from 'react-hot-toast';
 import {
-  ShieldCheck, ShieldAlert, Shield, ExternalLink, Upload,
+  ShieldCheck, Shield, ExternalLink,
   CheckCircle2, AlertTriangle, XCircle, Clock, FileArchive,
-  RefreshCw, User, Calendar, MapPin, Key, Trash2, Lock
+  User, Key, Trash2, Lock
 } from 'lucide-react';
 
 export default function IdentityVerification() {

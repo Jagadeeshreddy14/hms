@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { kycAPI } from '../../services/api';
-import { PageHeader, Card, Button, Badge, Loading, Table, StatCard, Modal, FormInput } from '../../components/common';
+import { PageHeader, Card, Button, Badge, Loading, Table, StatCard, Modal } from '../../components/common';
 import toast from 'react-hot-toast';
 import {
-  ShieldCheck, ShieldAlert, Shield, CheckCircle, XCircle,
-  AlertTriangle, Clock, Eye, Check, X, RefreshCw, User,
-  Calendar, MapPin, Search, Filter, Lock
+  ShieldCheck, ShieldAlert, Shield, AlertTriangle, Eye, Check, X, RefreshCw, User, Search
 } from 'lucide-react';
 
 export default function KycVerifications() {

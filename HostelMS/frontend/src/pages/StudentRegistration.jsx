@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Upload, ChevronLeft, Trash2, Mail, CheckCircle2, ShieldCheck, RefreshCw, KeyRound, ArrowRight, Lock, User, Phone } from 'lucide-react';
+import { Upload, ChevronLeft, Trash2, Mail, CheckCircle2, RefreshCw, ArrowRight, Lock, User, Phone } from 'lucide-react';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -15,7 +15,6 @@ export default function StudentRegistration() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otp, setOtp] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
-  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
