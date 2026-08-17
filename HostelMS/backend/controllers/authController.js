@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Student = require('../models/Student');
+const Otp = require('../models/Otp');
+const { sendOtpEmail } = require('../utils/email');
 
 // Helper: send token response
 const sendTokenResponse = (user, statusCode, res) => {
@@ -21,6 +23,86 @@ const sendTokenResponse = (user, statusCode, res) => {
       studentId: user.studentId,
     },
   });
+};
+
+// @desc    Send OTP to email
+// @route   POST /api/auth/send-otp
+// @access  Public
+exports.sendOtp = async (req, res, next) => {
+  try {
+    const { email, purpose = 'registration' } = req.body;
+    const normalizedEmail = (email || '').trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+    }
+
+    // Check if email already registered (for registration purpose)
+    if (purpose === 'registration') {
+      const existingUser = await User.findOne({ email: normalizedEmail });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: 'This email is already registered. Please log in or use a different email.'
+        });
+      }
+    }
+
+    // Generate secure 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Clear previous unverified OTPs for this email and purpose
+    await Otp.deleteMany({ email: normalizedEmail, purpose });
+
+    // Save new OTP record (10-minute auto-expiry in Mongo)
+    await Otp.create({
+      email: normalizedEmail,
+      otp,
+      purpose
+    });
+
+    // Send email
+    const emailResult = await sendOtpEmail(normalizedEmail, otp, purpose);
+
+    res.status(200).json({
+      success: true,
+      message: `Verification code sent to ${normalizedEmail}`,
+      devOtp: emailResult.devOtp || undefined
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify OTP
+// @route   POST /api/auth/verify-otp
+// @access  Public
+exports.verifyOtp = async (req, res, next) => {
+  try {
+    const { email, otp, purpose = 'registration' } = req.body;
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const cleanOtp = (otp || '').trim();
+
+    if (!normalizedEmail || !cleanOtp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+    }
+
+    const otpRecord = await Otp.findOne({ email: normalizedEmail, otp: cleanOtp, purpose });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP. Please request a new code.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully!'
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // @desc    Register user (admin/warden)

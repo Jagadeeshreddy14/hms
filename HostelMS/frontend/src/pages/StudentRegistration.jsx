@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Upload, ChevronLeft, Trash2 } from 'lucide-react';
+import { Upload, ChevronLeft, Trash2, Mail, CheckCircle2, ShieldCheck, RefreshCw, KeyRound, ArrowRight, Lock, User, Phone } from 'lucide-react';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -11,6 +11,12 @@ export default function StudentRegistration() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -24,6 +30,17 @@ export default function StudentRegistration() {
     collegeId: { file: null, preview: null, status: 'idle', error: '' },
     photo: { file: null, preview: null, status: 'idle', error: '' },
   });
+
+  // Countdown for Resend OTP
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   useEffect(() => {
     return () => {
@@ -62,8 +79,17 @@ export default function StudentRegistration() {
   };
 
   const validateStep1 = () => {
-    if (!form.name || !form.email || !form.password || !form.confirmPassword || !form.phone) {
+    if (!form.name.trim() || !form.email.trim() || !form.password || !form.confirmPassword || !form.phone.trim()) {
       toast.error('Please fill all required fields');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+    if (form.phone.trim().length < 10) {
+      toast.error('Please enter a valid 10-digit mobile number');
       return false;
     }
     if (form.password !== form.confirmPassword) {
@@ -77,7 +103,62 @@ export default function StudentRegistration() {
     return true;
   };
 
-  const validateStep2 = () => {
+  const handleSendOtp = async () => {
+    if (!validateStep1()) return;
+    setSendingOtp(true);
+    try {
+      const { data } = await authAPI.sendOtp({ email: form.email.trim().toLowerCase(), purpose: 'registration' });
+      toast.success(data.message || 'Verification code sent to your email');
+      setStep(2);
+      setResendTimer(60);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Error sending verification code');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp.trim() || otp.trim().length !== 6) {
+      toast.error('Please enter the 6-digit verification code');
+      return;
+    }
+    setVerifyingOtp(true);
+    try {
+      await authAPI.verifyOtp({
+        email: form.email.trim().toLowerCase(),
+        otp: otp.trim(),
+        purpose: 'registration'
+      });
+      setIsEmailVerified(true);
+      toast.success('Email verified successfully!');
+      setStep(3);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Invalid or expired OTP');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    setSendingOtp(true);
+    try {
+      const { data } = await authAPI.sendOtp({ email: form.email.trim().toLowerCase(), purpose: 'registration' });
+      toast.success(data.message || 'New verification code sent');
+      setResendTimer(60);
+      setOtp('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error resending code');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const validateStep3 = () => {
     if (!files.aadhar.file) { toast.error('Please upload Aadhaar / Government ID'); return false; }
     if (files.aadhar.file && files.aadhar.file.type !== 'application/pdf') { toast.error('Aadhaar must be a PDF'); return false; }
     if (!files.collegeId.file) { toast.error('Please upload College ID / Employee ID'); return false; }
@@ -85,11 +166,9 @@ export default function StudentRegistration() {
     return true;
   };
 
-  const handleNext = () => { if (validateStep1()) setStep(2); };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateStep2()) return;
+    if (!validateStep3()) return;
     setLoading(true);
 
     setFiles(prev => Object.fromEntries(Object.entries(prev).map(([k,v])=>[k,{...v,status:'uploading'}])));
@@ -101,10 +180,11 @@ export default function StudentRegistration() {
       formData.append('aadhar', files.aadhar.file);
       formData.append('collegeId', files.collegeId.file);
       formData.append('photo', files.photo.file);
+      formData.append('isEmailVerified', 'true');
 
       const { data } = await authAPI.registerStudent(formData);
       setFiles(prev => Object.fromEntries(Object.entries(prev).map(([k,v])=>[k,{...v,status:'uploaded'}])));
-      toast.success(data.message || 'Registration submitted — pending verification');
+      toast.success(data.message || 'Registration submitted successfully!');
       setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
       console.error(err);
@@ -118,31 +198,33 @@ export default function StudentRegistration() {
   const renderFileBlock = (key, label, acceptText) => {
     const f = files[key];
     return (
-      <div className="border border-slate-600 rounded-lg p-3">
+      <div className="border border-slate-700 bg-slate-800/40 rounded-xl p-4 transition hover:border-slate-600">
         <div className="flex items-center justify-between mb-2">
-          <div className="text-sm font-medium text-slate-300">{label} *</div>
-          <div className="text-xs text-slate-400">{f.status}</div>
+          <div className="text-sm font-semibold text-slate-200">{label} *</div>
+          <div className="text-xs font-mono text-slate-400 capitalize">{f.status}</div>
         </div>
-        <div className="flex gap-3">
-          <label className="flex-1 flex items-center gap-3 p-3 bg-slate-700/20 rounded-lg cursor-pointer">
-            <Upload className="w-5 h-5 text-slate-400" />
-            <div>
-              <div className="text-sm text-slate-300">{f.file ? f.file.name : acceptText}</div>
-              {f.error && <div className="text-xs text-red-400">{f.error}</div>}
+        <div className="flex gap-4 items-center">
+          <label className="flex-1 flex items-center gap-3 p-3 bg-slate-900/60 border border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-900 transition">
+            <Upload className="w-5 h-5 text-primary-400 flex-shrink-0" />
+            <div className="overflow-hidden">
+              <div className="text-sm text-slate-200 truncate font-medium">{f.file ? f.file.name : acceptText}</div>
+              {f.error && <div className="text-xs text-red-400 mt-0.5">{f.error}</div>}
             </div>
             <input type="file" name={key} accept=".jpg,.jpeg,.png,.pdf" onChange={handleFileChange} className="hidden" />
           </label>
-          <div className="w-28 flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
             {f.preview ? (
-              <img src={f.preview} alt="preview" className="w-24 h-24 object-cover rounded-md border" />
+              <img src={f.preview} alt="preview" className="w-14 h-14 object-cover rounded-lg border border-slate-700 shadow-sm" />
             ) : f.file && f.file.type === 'application/pdf' ? (
-              <a href={URL.createObjectURL(f.file)} target="_blank" rel="noreferrer" className="text-sm text-primary-300">Preview PDF</a>
+              <a href={URL.createObjectURL(f.file)} target="_blank" rel="noreferrer" className="text-xs text-primary-400 underline font-semibold">Preview PDF</a>
             ) : (
-              <div className="w-24 h-24 bg-slate-800 rounded-md flex items-center justify-center text-xs text-slate-400">No preview</div>
+              <div className="w-14 h-14 bg-slate-900/80 rounded-lg flex items-center justify-center text-[10px] text-slate-500 border border-slate-800 text-center px-1">No file</div>
             )}
-            <div className="flex gap-2">
-              {f.file && <button type="button" onClick={() => removeFile(key)} className="text-red-400 flex items-center gap-1"><Trash2 className="w-4 h-4" />Remove</button>}
-            </div>
+            {f.file && (
+              <button type="button" onClick={() => removeFile(key)} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition" title="Remove">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -150,71 +232,249 @@ export default function StudentRegistration() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-primary-900 to-slate-900 flex items-center justify-center p-4 py-12">
-      <div className="w-full max-w-3xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-primary-950 flex items-center justify-center p-4 py-12">
+      <div className="w-full max-w-2xl">
         <div className="flex items-center justify-between mb-6">
-          <Link to="/login" className="inline-flex items-center gap-2 text-slate-400 hover:text-white">
-            <ChevronLeft className="w-5 h-5" /> Back to Login
+          <Link to="/login" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition text-sm">
+            <ChevronLeft className="w-4 h-4" /> Back to Login
           </Link>
-          <div className="text-sm text-slate-400">Step <span className="text-primary-400 font-semibold">{step}</span> of 2</div>
+          <div className="text-xs font-semibold text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
+            Step <span className="text-primary-400 font-bold">{step}</span> of 3
+          </div>
         </div>
 
-        <div className="bg-white/5 p-8 rounded-2xl border border-white/10 shadow-lg">
-          <h2 className="text-2xl text-white font-semibold mb-4">Student Registration</h2>
+        {/* Step Indicator Bar */}
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className={`h-1.5 rounded-full transition-all ${step >= 1 ? 'bg-primary-500' : 'bg-slate-800'}`}></div>
+          <div className={`h-1.5 rounded-full transition-all ${step >= 2 ? 'bg-primary-500' : 'bg-slate-800'}`}></div>
+          <div className={`h-1.5 rounded-full transition-all ${step >= 3 ? 'bg-primary-500' : 'bg-slate-800'}`}></div>
+        </div>
 
+        <div className="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-800 shadow-2xl">
+          {/* Header */}
+          <div className="mb-6">
+            <h2 className="text-2xl text-white font-bold tracking-tight">
+              {step === 1 && 'Create Student Account'}
+              {step === 2 && 'Verify Your Email'}
+              {step === 3 && 'Upload Verification Documents'}
+            </h2>
+            <p className="text-sm text-slate-400 mt-1">
+              {step === 1 && 'Enter your personal details to receive your email verification code.'}
+              {step === 2 && `Enter the 6-digit code sent to ${form.email}`}
+              {step === 3 && 'Upload government identification and college proof for admin approval.'}
+            </p>
+          </div>
+
+          {/* STEP 1: Personal Details */}
           {step === 1 && (
-            <form className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Full Name *</label>
-                  <input name="name" value={form.name ?? ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded bg-slate-700/30 text-white" />
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">Full Name *</label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      name="name"
+                      placeholder="e.g. Rahul Sharma"
+                      value={form.name}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Mobile Number *</label>
-                  <input name="phone" value={form.phone ?? ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded bg-slate-700/30 text-white" />
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">Mobile Number *</label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      name="phone"
+                      placeholder="10-digit mobile"
+                      value={form.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-slate-300 mb-1">Email *</label>
-                <input name="email" value={form.email ?? ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded bg-slate-700/30 text-white" />
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">Email Address *</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="student@example.com"
+                    value={form.email}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">We will send a 6-digit OTP code to verify this email address.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Password *</label>
-                  <input name="password" type="password" value={form.password ?? ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded bg-slate-700/30 text-white" />
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">Password *</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      name="password"
+                      type="password"
+                      placeholder="Min. 6 characters"
+                      value={form.password}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Confirm Password *</label>
-                  <input name="confirmPassword" type="password" value={form.confirmPassword ?? ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded bg-slate-700/30 text-white" />
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">Confirm Password *</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Re-enter password"
+                      value={form.confirmPassword}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <button type="button" onClick={handleNext} className="w-full bg-primary-600 py-2.5 rounded text-white font-semibold">Next: Upload Documents</button>
-            </form>
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={sendingOtp}
+                className="w-full mt-4 bg-gradient-to-r from-primary-600 to-emerald-600 hover:from-primary-500 hover:to-emerald-500 py-3 rounded-xl text-white font-semibold text-sm shadow-lg shadow-primary-900/30 transition flex items-center justify-center gap-2 active:scale-[0.99]"
+              >
+                {sendingOtp ? (
+                  <>Sending Verification Code...</>
+                ) : (
+                  <>
+                    Next: Verify Email <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
           )}
 
+          {/* STEP 2: Email OTP Verification */}
           {step === 2 && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <p className="text-slate-400">Upload required documents. Allowed: JPG, JPEG, PNG, PDF. Max 5MB each.</p>
-
-              <div className="grid grid-cols-1 gap-4">
-                {renderFileBlock('aadhar', 'Aadhaar / Government ID', 'Select Aadhaar or Government ID')}
-                {renderFileBlock('collegeId', 'College ID / Employee ID', 'Select College / Employee ID')}
-                {renderFileBlock('photo', 'Passport-size Photo', 'Select passport photo')}
+            <form onSubmit={handleVerifyOtp} className="space-y-6">
+              <div className="bg-slate-800/50 border border-slate-700/80 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary-500/20 text-primary-400 flex items-center justify-center">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Verification Code sent to</p>
+                    <p className="text-sm font-semibold text-white truncate max-w-[240px]">{form.email}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-xs text-primary-400 hover:underline font-semibold"
+                >
+                  Change
+                </button>
               </div>
 
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setStep(1)} className="flex-1 border border-slate-600 text-slate-300 py-2.5 rounded">Back</button>
-                <button type="submit" disabled={loading} className="flex-1 bg-primary-600 py-2.5 rounded text-white">{loading ? 'Submitting...' : 'Submit Registration'}</button>
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider text-center">
+                  Enter 6-Digit Verification Code
+                </label>
+                <div className="relative max-w-xs mx-auto">
+                  <input
+                    type="text"
+                    maxLength="6"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="123456"
+                    className="w-full text-center tracking-[12px] font-mono text-2xl font-bold py-3.5 px-4 rounded-2xl bg-slate-800 border-2 border-primary-500/50 text-white focus:outline-none focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center text-sm">
+                {resendTimer > 0 ? (
+                  <span className="text-xs text-slate-400">
+                    Resend code in <strong className="text-primary-400 font-mono">{resendTimer}s</strong>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={sendingOtp}
+                    className="text-xs text-primary-400 hover:text-primary-300 font-semibold inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" /> Resend Code
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="flex-1 py-3 border border-slate-700 text-slate-300 hover:bg-slate-800 rounded-xl text-sm font-semibold transition"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifyingOtp || otp.length !== 6}
+                  className="flex-1 py-3 bg-gradient-to-r from-primary-600 to-emerald-600 hover:from-primary-500 hover:to-emerald-500 text-white font-semibold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {verifyingOtp ? 'Verifying...' : 'Verify & Continue'}
+                </button>
               </div>
             </form>
           )}
 
-          <div className="mt-4 text-sm text-slate-400">Your account will be assigned <strong>role = "student"</strong> and set to <em>Pending Verification</em> until an admin reviews documents.</div>
+          {/* STEP 3: Document Uploads */}
+          {step === 3 && (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>Email <strong>{form.email}</strong> verified successfully. Please upload your documents.</span>
+              </div>
+
+              <div className="space-y-3">
+                {renderFileBlock('aadhar', 'Aadhaar / Government ID (PDF Only)', 'Select Aadhaar PDF file')}
+                {renderFileBlock('collegeId', 'College ID / Employee ID (PDF or Image)', 'Select College or Work ID')}
+                {renderFileBlock('photo', 'Passport-size Photo (JPG or PNG)', 'Select passport photo')}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="flex-1 py-3 border border-slate-700 text-slate-300 hover:bg-slate-800 rounded-xl text-sm font-semibold transition"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 py-3 bg-gradient-to-r from-primary-600 to-emerald-600 hover:from-primary-500 hover:to-emerald-500 rounded-xl text-white font-semibold text-sm shadow-lg transition disabled:opacity-50"
+                >
+                  {loading ? 'Submitting Application...' : 'Submit Registration'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="mt-6 pt-4 border-t border-slate-800/80 text-xs text-slate-400 text-center">
+            Already have an approved account? <Link to="/login" className="text-primary-400 hover:underline font-semibold">Sign in here</Link>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

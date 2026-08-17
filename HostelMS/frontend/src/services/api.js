@@ -38,6 +38,8 @@ export default api;
 // Auth
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
+  sendOtp: (data) => api.post('/auth/send-otp', data),
+  verifyOtp: (data) => api.post('/auth/verify-otp', data),
   register: (data) => api.post('/auth/register', data),
   registerStudent: (formData) => api.post('/auth/register-student', formData, {
     headers: { 'Content-Type': undefined }
