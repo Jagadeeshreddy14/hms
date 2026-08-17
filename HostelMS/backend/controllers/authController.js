@@ -87,7 +87,7 @@ exports.sendOtp = async (req, res, next) => {
       console.error(`❌ OTP Dispatch Failed for ${normalizedEmail.split('@')[1]}: ${emailResult.error}`);
       return res.status(500).json({
         success: false,
-        message: 'Unable to deliver verification code. Please check server email settings or contact administration.'
+        message: emailResult.error || 'Email service is not configured. Please add RESEND_API_KEY to your Render environment variables.'
       });
     }
 
