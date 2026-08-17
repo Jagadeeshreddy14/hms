@@ -1,5 +1,13 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyDUcDxLRDAMtmuvwXLDrLG2MEl7hOdGeGc',
@@ -39,5 +47,76 @@ export const signInWithGooglePopup = async () => {
       success: false,
       error: error.message || 'Google sign in was cancelled or failed.',
     };
+  }
+};
+
+/**
+ * Firebase Email Registration with Automated Verification Email
+ */
+export const firebaseRegisterWithEmail = async (email, password) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    // Send official Google verification email
+    try {
+      await sendEmailVerification(user);
+    } catch (verifErr) {
+      console.warn('Firebase Email Verification dispatch warning:', verifErr);
+    }
+    return {
+      success: true,
+      user: {
+        uid: user.uid,
+        email: user.email,
+      },
+    };
+  } catch (error) {
+    console.error('Firebase Email Register Error:', error);
+    let errorMsg = error.message;
+    if (error.code === 'auth/email-already-in-use') {
+      errorMsg = 'This email is already registered. Please sign in instead.';
+    } else if (error.code === 'auth/weak-password') {
+      errorMsg = 'Password must be at least 6 characters.';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMsg = 'Please provide a valid email address.';
+    }
+    return { success: false, error: errorMsg };
+  }
+};
+
+/**
+ * Firebase Email Login
+ */
+export const firebaseLoginWithEmail = async (email, password) => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    return {
+      success: true,
+      user: {
+        uid: user.uid,
+        email: user.email,
+      },
+    };
+  } catch (error) {
+    console.error('Firebase Email Login Error:', error);
+    let errorMsg = error.message;
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      errorMsg = 'Invalid email or password.';
+    }
+    return { success: false, error: errorMsg };
+  }
+};
+
+/**
+ * Firebase Password Reset Email
+ */
+export const firebaseResetPassword = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error) {
+    console.error('Firebase Password Reset Error:', error);
+    return { success: false, error: error.message || 'Failed to send reset email' };
   }
 };

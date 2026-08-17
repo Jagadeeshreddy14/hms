@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { Upload, ChevronLeft, Trash2, Mail, CheckCircle2, RefreshCw, ArrowRight, Lock, User, Phone, Loader2 } from 'lucide-react';
-import { signInWithGooglePopup } from '../config/firebase';
+import { signInWithGooglePopup, firebaseRegisterWithEmail } from '../config/firebase';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -134,14 +134,23 @@ export default function StudentRegistration() {
     if (!validateStep1()) return;
     setSendingOtp(true);
     try {
+      // 1. Register with Firebase Email Auth (sends Google official verification email)
+      const fbResult = await firebaseRegisterWithEmail(form.email.trim().toLowerCase(), form.password);
+      if (fbResult.success) {
+        toast.success('Firebase verification email sent! Please check your inbox.');
+        setStep(3); // Fast-track directly to document uploads
+        return;
+      }
+
+      // If email already in use in Firebase, try OTP fallback
       const { data } = await authAPI.sendOtp({ email: form.email.trim().toLowerCase(), purpose: 'registration' });
       toast.success(data.message || 'Verification code sent to your email');
       setStep(2);
       setResendTimer(60);
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'Email delivery delayed. You can proceed with document uploads.');
-      setStep(2);
+      toast.error('Proceeding to document upload stage.');
+      setStep(3);
     } finally {
       setSendingOtp(false);
     }
