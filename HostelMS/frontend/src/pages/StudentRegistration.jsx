@@ -131,7 +131,6 @@ export default function StudentRegistration() {
         otp: otp.trim(),
         purpose: 'registration'
       });
-      setIsEmailVerified(true);
       toast.success('Email verified successfully!');
       setStep(3);
     } catch (err) {
