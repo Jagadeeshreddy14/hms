@@ -16,6 +16,8 @@ export default function IdentityVerification() {
   const [shareCode, setShareCode] = useState('');
   const [showRevokeModal, setShowRevokeModal] = useState(false);
 
+  const shareCodeInputRef = React.useRef(null);
+
   const fetchStatus = async () => {
     try {
       const { data } = await kycAPI.getAadhaarStatus();
@@ -32,6 +34,27 @@ export default function IdentityVerification() {
     fetchStatus();
   }, []);
 
+  const executeVerification = async (selectedZip, code) => {
+    if (!selectedZip || code.length !== 4) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('zipFile', selectedZip);
+    formData.append('shareCode', code.trim());
+
+    try {
+      const { data } = await kycAPI.verifyAadhaar(formData);
+      toast.success(data.message || 'Aadhaar verified successfully!');
+      setZipFile(null);
+      setShareCode('');
+      fetchStatus();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Verification failed. Please check your ZIP file and Share Code.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -45,10 +68,26 @@ export default function IdentityVerification() {
       return;
     }
     setZipFile(file);
+
+    // Auto-verify if 4-digit code is already entered, else focus share code input
+    if (shareCode.trim().length === 4) {
+      executeVerification(file, shareCode.trim());
+    } else {
+      setTimeout(() => shareCodeInputRef.current?.focus(), 150);
+    }
+  };
+
+  const handleShareCodeChange = (e) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    setShareCode(val);
+    if (val.length === 4 && zipFile) {
+      // Auto-trigger verification immediately
+      executeVerification(zipFile, val);
+    }
   };
 
   const handleVerify = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!zipFile) {
       toast.error('Please upload your Aadhaar Offline e-KYC ZIP file');
       return;
@@ -57,24 +96,7 @@ export default function IdentityVerification() {
       toast.error('Please enter the 4-digit numeric Share Code');
       return;
     }
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('zipFile', zipFile);
-    formData.append('shareCode', shareCode.trim());
-
-    try {
-      const { data } = await kycAPI.verifyAadhaar(formData);
-      toast.success(data.message || 'Aadhaar verification completed');
-      setZipFile(null);
-      setShareCode('');
-      fetchStatus();
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Verification failed. Please check your ZIP file and Share Code.');
-    } finally {
-      setUploading(false);
-    }
+    executeVerification(zipFile, shareCode);
   };
 
   const handleRevoke = async () => {
@@ -298,11 +320,12 @@ export default function IdentityVerification() {
                     <div className="relative">
                       <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                       <input
+                        ref={shareCodeInputRef}
                         type="password"
                         maxLength="4"
                         placeholder="e.g. 1234"
                         value={shareCode}
-                        onChange={(e) => setShareCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        onChange={handleShareCodeChange}
                         className="w-full pl-10 pr-4 py-2.5 text-center font-mono text-lg font-bold tracking-widest border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
