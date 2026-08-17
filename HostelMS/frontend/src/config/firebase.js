@@ -2,12 +2,13 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyDummyKeyForInitializationOnly',
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'srisrinivasa-hostel.firebaseapp.com',
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || 'srisrinivasa-hostel',
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'srisrinivasa-hostel.appspot.com',
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '1234567890',
-  appId: process.env.REACT_APP_FIREBASE_APP_ID || '1:1234567890:web:abcdef',
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyDUcDxLRDAMtmuvwXLDrLG2MEl7hOdGeGc',
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'sri-srinivasa-boys-hoste-8e404.firebaseapp.com',
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || 'sri-srinivasa-boys-hoste-8e404',
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || 'sri-srinivasa-boys-hoste-8e404.firebasestorage.app',
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || '915670897560',
+  appId: process.env.REACT_APP_FIREBASE_APP_ID || '1:915670897560:web:1a5bbb750e5424007c91ed',
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-XX096RM64Z',
 };
 
 // Initialize Firebase safely
