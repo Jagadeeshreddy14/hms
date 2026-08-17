@@ -62,12 +62,12 @@ exports.sendOtpEmail = async (to, otp, purpose = 'registration') => {
   if (process.env.RESEND_API_KEY) {
     try {
       console.log(`🚀 [RESEND API] Sending OTP email to recipient domain: ${to.split('@')[1] || 'domain'}`);
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      const resendFrom = process.env.RESEND_FROM || `${fromName} <onboarding@resend.dev>`;
+      const resend = new Resend(process.env.RESEND_API_KEY.trim());
+      const resendFrom = process.env.RESEND_FROM || 'onboarding@resend.dev';
 
       const response = await resend.emails.send({
         from: resendFrom,
-        to: [to],
+        to: [to.trim().toLowerCase()],
         subject: `Your Verification Code: ${otp} - ${fromName}`,
         html: htmlContent,
       });
