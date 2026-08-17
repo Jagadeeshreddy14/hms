@@ -112,7 +112,8 @@ export default function StudentRegistration() {
       setResendTimer(60);
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'Error sending verification code');
+      toast.error(err.response?.data?.message || 'Email delivery delayed. You can proceed with document uploads.');
+      setStep(2);
     } finally {
       setSendingOtp(false);
     }
@@ -431,6 +432,16 @@ export default function StudentRegistration() {
                   {verifyingOtp ? 'Verifying...' : 'Verify & Continue'}
                 </button>
               </div>
+
+              <div className="text-center pt-1 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="text-xs text-slate-400 hover:text-primary-400 transition font-medium underline"
+                >
+                  Skip Email OTP & Upload ID Documents Directly →
+                </button>
+              </div>
             </form>
           )}
 
@@ -439,7 +450,7 @@ export default function StudentRegistration() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-300">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span>Email <strong>{form.email}</strong> verified successfully. Please upload your documents.</span>
+                <span>Account details for <strong>{form.email}</strong> confirmed. Please upload your verification documents for admin review.</span>
               </div>
 
               <div className="space-y-3">
