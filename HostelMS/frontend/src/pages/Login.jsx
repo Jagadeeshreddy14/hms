@@ -12,7 +12,7 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleGoogleLogin = async () => {
@@ -23,16 +23,14 @@ export default function Login() {
         toast.error(res.error || 'Google login failed');
         return;
       }
-      const { data } = await authAPI.googleLogin({
+      const user = await loginWithGoogle({
         email: res.user.email,
         name: res.user.name,
         avatar: res.user.photoURL,
         googleId: res.user.uid,
       });
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      toast.success(`Welcome, ${data.user.name}!`);
-      navigate(`/${data.user.role}`);
+      toast.success(`Welcome, ${user.name}!`);
+      navigate(`/${user.role}`);
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || 'Google authentication failed');
