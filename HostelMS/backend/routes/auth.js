@@ -2,7 +2,17 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { register, registerStudent, login, getMe, updateProfile, changePassword, sendOtp, verifyOtp } = require('../controllers/authController');
+const {
+  register,
+  registerStudent,
+  login,
+  googleAuth,
+  getMe,
+  updateProfile,
+  changePassword,
+  sendOtp,
+  verifyOtp
+} = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
 // Configure multer for document uploads
@@ -99,6 +109,7 @@ router.post('/register-student',
   registerStudent
 );
 router.post('/login', login);
+router.post('/google', googleAuth);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/password', protect, changePassword);

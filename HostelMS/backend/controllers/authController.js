@@ -359,6 +359,59 @@ exports.login = async (req, res, next) => {
   }
 };
 
+// @desc    Google Sign-In / 1-Click Auth
+// @route   POST /api/auth/google
+// @access  Public
+exports.googleAuth = async (req, res, next) => {
+  try {
+    const { email, name, avatar, googleId } = req.body;
+    const normalizedEmail = (email || '').trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, message: 'Google account email is required' });
+    }
+
+    let user = await User.findOne({ email: normalizedEmail }).populate('studentId');
+
+    if (!user) {
+      // Create new student user with Google profile
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      user = await User.create({
+        name: name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        password: randomPassword,
+        role: 'student',
+        avatar: avatar || '',
+      });
+      return sendTokenResponse(user, 201, res);
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({ success: false, message: 'Account has been deactivated' });
+    }
+
+    // Check if student registration is pending
+    if (user.role === 'student' && user.studentId) {
+      if (user.studentId.registrationStatus === 'pending') {
+        return res.status(403).json({
+          success: false,
+          message: 'Your registration is pending approval. Please wait for admin approval.'
+        });
+      }
+      if (user.studentId.registrationStatus === 'rejected') {
+        return res.status(403).json({
+          success: false,
+          message: `Your registration was rejected. Reason: ${user.studentId.rejectionReason || 'Contact administration'}`
+        });
+      }
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
