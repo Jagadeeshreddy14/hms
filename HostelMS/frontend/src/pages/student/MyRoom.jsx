@@ -115,19 +115,25 @@ export default function MyRoom() {
 
       {/* Student profile */}
       <Card className="p-5">
-        <h4 className="font-semibold text-slate-900 mb-3">My Details</h4>
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <h4 className="font-semibold text-slate-900 mb-3">Resident Profile Details</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
           {[
-            ['Roll No.', student.rollNumber],
-            ['Course', student.course],
-            ['Year', student.year ? `Year ${student.year}` : '—'],
-            ['Guardian', student.guardianName || '—'],
-            ['Guardian Ph.', student.guardianPhone || '—'],
+            ['Roll / Student ID', student.rollNumber || '—'],
+            ['Course & Year', `${student.course || '—'} ${student.year ? `(Yr ${student.year})` : ''}`],
+            ['Branch / Dept', student.branch || student.department || '—'],
+            ['Blood Group', student.bloodGroup || '—'],
+            ['Mobile Phone', student.phone || '—'],
+            ['Emergency Contact', student.emergencyContact || '—'],
+            ['Guardian Name', student.guardianName ? `${student.guardianName} (${student.guardianRelation || 'Parent'})` : '—'],
+            ['Guardian Phone', student.guardianPhone || '—'],
             ['Address', student.address || '—'],
+            ['City & State', student.city ? `${student.city}, ${student.state || ''} - ${student.pincode || ''}` : '—'],
+            ['Permanent Address', student.permanentAddress || student.address || '—'],
+            ['Status', student.status || 'Active'],
           ].map(([l, v]) => (
             <div key={l} className="bg-slate-50 rounded-xl p-3">
-              <div className="text-xs text-slate-400">{l}</div>
-              <div className="font-medium text-slate-800 mt-0.5">{v}</div>
+              <div className="text-xs text-slate-400 font-medium">{l}</div>
+              <div className="font-semibold text-slate-800 mt-0.5 text-xs truncate" title={v}>{v}</div>
             </div>
           ))}
         </div>

@@ -219,46 +219,60 @@ function DetailModal({ registration, onApprove, onReject, onClose }) {
           <section>
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-primary-600" />
-              Personal Information
+              Personal & Contact Information
             </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <InfoField label="Full Name" value={registration.user?.name} />
-              <InfoField label="Email" value={registration.user?.email} />
-              <InfoField label="Phone" value={registration.user?.phone} />
-              <InfoField label="Contact Number" value={registration.phone} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <InfoField label="Full Name" value={registration.user?.name || registration.name} />
+              <InfoField label="Email" value={registration.user?.email || registration.email} />
+              <InfoField label="Phone" value={registration.user?.phone || registration.phone} />
+              <InfoField label="Blood Group" value={registration.bloodGroup} />
+            </div>
+          </section>
+
+          {/* Academic & Resident Information */}
+          <section>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-primary-600" />
+              Academic & Resident Profile
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <InfoField label="Roll / Student ID" value={registration.rollNumber} />
+              <InfoField label="Course / Degree" value={registration.course} />
+              <InfoField label="Year of Study" value={registration.year ? `Year ${registration.year}` : '-'} />
+              <InfoField label="Branch / Dept" value={registration.branch || registration.department} />
+            </div>
+          </section>
+
+          {/* Guardian & Emergency Information */}
+          <section>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Guardian & Emergency Details</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <InfoField label="Guardian Name" value={registration.guardianName} />
+              <InfoField label="Guardian Phone" value={registration.guardianPhone} />
+              <InfoField label="Relationship" value={registration.guardianRelation || 'Parent'} />
+              <InfoField label="Emergency Contact" value={registration.emergencyContact} />
             </div>
           </section>
 
           {/* Address Information (if provided) */}
           {(registration.address || registration.permanentAddress || registration.city || registration.state || registration.pincode) && (
             <section>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Address Information</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Residential Address</h3>
               <div className="space-y-3">
                 {registration.address && <InfoField label="Current/Mailing Address" value={registration.address} />}
                 {registration.permanentAddress && <InfoField label="Permanent Address" value={registration.permanentAddress} />}
                 <div className="grid grid-cols-3 gap-4">
                   {registration.city && <InfoField label="City" value={registration.city} />}
                   {registration.state && <InfoField label="State" value={registration.state} />}
-                  {registration.pincode && <InfoField label="Pincode" value={registration.pincode} />}
+                  {registration.pincode && <InfoField label="PIN Code" value={registration.pincode} />}
                 </div>
-              </div>
-            </section>
-          )}
-
-          {/* Guardian Information (if provided) */}
-          {(registration.guardianName || registration.guardianPhone) && (
-            <section>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Guardian Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <InfoField label="Guardian Name" value={registration.guardianName} />
-                <InfoField label="Guardian Phone" value={registration.guardianPhone} />
               </div>
             </section>
           )}
 
           {/* Uploaded Documents */}
           <section>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Uploaded Documents</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Uploaded Verification Documents</h3>
             <div className="space-y-3">
               {registration.photoUrl && (
                 <DocumentLink
@@ -268,13 +282,13 @@ function DetailModal({ registration, onApprove, onReject, onClose }) {
               )}
               {registration.aadharUrl && (
                 <DocumentLink
-                  label="Aadhar Card (PDF)"
+                  label="Aadhaar Card (PDF)"
                   url={registration.aadharUrl}
                 />
               )}
               {registration.collegeIdUrl && (
                 <DocumentLink
-                  label="College ID"
+                  label="College ID Proof"
                   url={registration.collegeIdUrl}
                 />
               )}

@@ -143,8 +143,21 @@ export default function StudentDashboard() {
     <div className="space-y-8">
       {/* Welcome banner */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-md">
-        <h2 className="font-display text-2xl font-bold">Hello, {user?.name?.split(' ')[0]}! 👋</h2>
-        <p className="text-emerald-100 mt-1 text-sm">Here's your hostel status overview</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-bold">Hello, {user?.name?.split(' ')[0]}! 👋</h2>
+            <p className="text-emerald-100 mt-1 text-sm">
+              {student?.rollNumber ? `Resident ID: ${student.rollNumber}` : "Here's your hostel status overview"}
+              {student?.course ? ` · ${student.course}` : ''}
+              {student?.branch ? ` (${student.branch})` : ''}
+            </p>
+          </div>
+          {student?.bloodGroup && (
+            <div className="bg-white/20 backdrop-blur-sm px-3.5 py-1.5 rounded-xl text-xs font-semibold tracking-wide border border-white/20">
+              🩸 Blood Group: <span className="font-bold text-white">{student.bloodGroup}</span>
+            </div>
+          )}
+        </div>
 
         {/* Room info */}
         {student?.room ? (

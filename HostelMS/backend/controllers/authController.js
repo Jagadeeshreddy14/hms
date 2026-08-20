@@ -199,10 +199,16 @@ exports.registerStudent = async (req, res, next) => {
       email,
       password,
       phone,
+      rollNumber,
       course,
       year,
+      branch,
+      department,
       guardianName,
       guardianPhone,
+      guardianRelation,
+      emergencyContact,
+      bloodGroup,
       address,
       permanentAddress,
       city,
@@ -213,7 +219,7 @@ exports.registerStudent = async (req, res, next) => {
 
     // Debug: Log incoming data
     console.log('📝 Student Registration Request:');
-    console.log('   Body fields:', { name, email, phone, course, year, guardianName });
+    console.log('   Body fields:', { name, email, phone, rollNumber, course, year, branch, guardianName });
     console.log('   Files received:', req.files ? Object.keys(req.files) : 'NO FILES');
     if (req.files) {
       console.log('   Aadhar:', req.files.aadhar ? `✓ ${req.files.aadhar[0].filename}` : '✗');
@@ -270,21 +276,27 @@ exports.registerStudent = async (req, res, next) => {
       phone
     });
 
-    // Create student record with pending approval
+    // Create student record with pending approval and complete resident details
     const studentData = {
       user: user._id,
       name,
-      email,
+      email: normalizedEmail,
       phone,
-      course,
+      rollNumber: rollNumber?.trim() || undefined,
+      course: course?.trim() || undefined,
       year: parseInt(year) || 1,
-      guardianName,
-      guardianPhone,
-      address,
-      permanentAddress,
-      city,
-      state,
-      pincode,
+      branch: branch?.trim() || undefined,
+      department: department?.trim() || undefined,
+      guardianName: guardianName?.trim() || undefined,
+      guardianPhone: guardianPhone?.trim() || undefined,
+      guardianRelation: guardianRelation?.trim() || 'Parent',
+      emergencyContact: emergencyContact?.trim() || undefined,
+      bloodGroup: bloodGroup?.trim() || undefined,
+      address: address?.trim() || undefined,
+      permanentAddress: permanentAddress?.trim() || address?.trim() || undefined,
+      city: city?.trim() || undefined,
+      state: state?.trim() || undefined,
+      pincode: pincode?.trim() || undefined,
       aadharUrl: `/uploads/documents/${aadharFile.filename}`,
       collegeIdUrl: `/uploads/documents/${collegeIdFile.filename}`,
       registrationStatus: 'pending',

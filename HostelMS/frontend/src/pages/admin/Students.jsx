@@ -137,22 +137,26 @@ export default function StudentsPage() {
                 <p className="text-slate-400 font-mono text-sm">{selectedStudent.rollNumber}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-sm max-h-[60vh] overflow-y-auto pr-1">
               {[
-                ['Course', selectedStudent.course],
-                ['Year', selectedStudent.year ? `Year ${selectedStudent.year}` : '—'],
-                ['Email', selectedStudent.email],
-                ['Phone', selectedStudent.phone || '—'],
-                ['Room', selectedStudent.room?.roomNumber || 'Not assigned'],
+                ['Roll Number', selectedStudent.rollNumber || '—'],
+                ['Course & Year', `${selectedStudent.course || '—'} ${selectedStudent.year ? `(Year ${selectedStudent.year})` : ''}`],
+                ['Branch / Dept', selectedStudent.branch || selectedStudent.department || '—'],
+                ['Blood Group', selectedStudent.bloodGroup || '—'],
+                ['Email', selectedStudent.email || '—'],
+                ['Mobile Phone', selectedStudent.phone || '—'],
+                ['Emergency Contact', selectedStudent.emergencyContact || '—'],
+                ['Room Assigned', selectedStudent.room?.roomNumber ? `Room ${selectedStudent.room.roomNumber} (${selectedStudent.room.hostelBlock || ''})` : 'Not assigned'],
                 ['Hostel', selectedStudent.hostel?.name || '—'],
-                ['Guardian', selectedStudent.guardianName || '—'],
-                ['Guardian Phone', selectedStudent.guardianPhone || '—'],
-                ['Address', selectedStudent.address || '—'],
+                ['Guardian Name', selectedStudent.guardianName ? `${selectedStudent.guardianName} (${selectedStudent.guardianRelation || 'Parent'})` : '—'],
+                ['Guardian Contact', selectedStudent.guardianPhone || '—'],
+                ['Residential Address', selectedStudent.address || '—'],
+                ['City & State', selectedStudent.city ? `${selectedStudent.city}, ${selectedStudent.state || ''} - ${selectedStudent.pincode || ''}` : '—'],
                 ['Admission Date', selectedStudent.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString('en-IN') : '—'],
               ].map(([label, val]) => (
                 <div key={label} className="bg-slate-50 rounded-xl p-3">
-                  <div className="text-xs text-slate-400">{label}</div>
-                  <div className="font-medium text-slate-800 mt-0.5 text-sm">{val}</div>
+                  <div className="text-xs text-slate-400 font-medium">{label}</div>
+                  <div className="font-semibold text-slate-800 mt-0.5 text-sm truncate" title={val}>{val}</div>
                 </div>
               ))}
             </div>
