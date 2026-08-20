@@ -12,7 +12,7 @@ exports.getRooms = async (req, res, next) => {
 
     const rooms = await Room.find(filter)
       .populate('hostel', 'name type')
-      .populate('students', 'name rollNumber');
+      .populate('students', 'name email phone rollNumber course year branch department bloodGroup emergencyContact guardianName guardianPhone photoUrl status');
 
     res.json({ success: true, count: rooms.length, data: rooms });
   } catch (error) {
@@ -26,7 +26,7 @@ exports.getRoom = async (req, res, next) => {
   try {
     const room = await Room.findById(req.params.id)
       .populate('hostel', 'name type address')
-      .populate('students', 'name rollNumber course phone');
+      .populate('students', 'name email phone rollNumber course year branch department bloodGroup emergencyContact guardianName guardianPhone photoUrl status');
 
     if (!room) return res.status(404).json({ success: false, message: 'Room not found' });
     res.json({ success: true, data: room });

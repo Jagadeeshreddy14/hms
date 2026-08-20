@@ -15,7 +15,7 @@ const NAV_ITEMS = {
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
     { to: '/admin/hostels', icon: Building2, label: 'Hostels' },
     { to: '/admin/rooms', icon: DoorOpen, label: 'Rooms' },
-    { to: '/admin/students', icon: Users, label: 'Students' },
+    { to: '/admin/students', icon: Users, label: 'Resident Directory' },
     { to: '/admin/student-approvals', icon: ClipboardList, label: 'Student Approvals' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { to: '/admin/complaints', icon: AlertCircle, label: 'Complaints' },

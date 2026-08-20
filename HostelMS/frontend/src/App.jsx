@@ -54,6 +54,7 @@ function AppRoutes() {
         <Route path="hostels" element={<HostelsPage />} />
         <Route path="rooms" element={<RoomsPage />} />
         <Route path="students" element={<StudentsPage />} />
+        <Route path="residents" element={<StudentsPage />} />
         <Route path="student-approvals" element={<StudentApprovals />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="complaints" element={<ComplaintsPage />} />
